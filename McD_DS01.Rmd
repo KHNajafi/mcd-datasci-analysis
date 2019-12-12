@@ -1,0 +1,141 @@
+---
+title: "Data Science @ McDonald's"
+subtitle: "Exercise 01 - Million Song Challenge; Recommendation Engine"
+author: "Khalil H Najafi"
+date: "December 2019"
+output: 
+        ioslides_presentation:
+                logo: mcd.png 
+                widescreen: true
+                smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Context
+
+This was an overview of recommendation systems based on a music dataset, with the objective of designing a service from relevant datasets
+
+Given the premise is overview/design, I have prepared my thoughts on the subject including specifics of my approach to such a project
+
+
+## Recommendation Systems - A Background
+
+To level set, let's look at the concept of a recommendation system:
+
+Usually based on an automated system (machine learning or deep learning more recently) that takes relevant information to suggest other items that a user may be interested in (higher probability of liking)
+
+- It has become ubiquitous when you think of ecommerce such as Amazon
+- Entertainment service like Netflix
+![](amazon_rec_ex.jpg)
+
+
+## Recommendation Systems - A Background (cont.)
+
+The concept has been around if you think of traditional retail visits where the sales individual may determine the items/services to recommend based on your purchase or visit purpose
+
+- Automotive: a salesperson would think of the add-on services or products based on what you were purchasing (winter tires, maintenance package, etc)
+- Retail: a salesperson may suggest insoles, laces, or cleaning products when you are making a purchase of shoes or boots
+- McDonald's: the cliche with more relevance in this conversation, _"would you like fries with that?"_
+
+
+## Recommendation Systems - The Motivation
+
+What is the value of such a system?
+
+- **Retention**: matching offers to a customer's expectations or demands builds loyalty
+- **Revenue**: relevant offers will increase the average revenue of transactions/purchases
+- **Behaviour**: by controlling the experience you can train expectations, or design the context around desirable paths; Netflix's recommendations comprise 80% of what is watched on their service^[https://mobilesyrup.com/2017/08/22/80-percent-netflix-shows-discovered-recommendation/, 2017]
+
+
+## Recommendation Systems - The Present
+
+With a basis in general business sensibility, the evolution of recommendations is attributed to technology and data: with the advances of computing and the explosion in data (both generated and stored) now provides the basis to easily create and productionalize the service
+
+![](datacenter.jpg)
+
+_Satellite image of a Google data center in Iowa, USA_
+
+
+## Recommendation Systems - Approaches
+
+There are several approaches to recommendation systems, though the popular ones are:
+
+- Content-based Filtering (Item-based)
+- Visitor-based Filtering
+- Collaborative Filtering
+    * this is the combination of both the item space and visitor space to personalize the recommendation
+    
+There are other approaches which generally are categorized separately:
+
+- Hybrid models
+- Heuristic model (rules-based)
+- Probability models
+
+## Million Songs Recommendation System
+
+For the defined context, I would opt for a **content-based recommendation system**
+
+As an initial model, and with the idea of properly capturing the complexities and nuances of music tastes, simplifying the approach to narrow in on **just the music** would be my focus
+
+- English-only music to start
+- Using song/track features to cluster the music
+    * I would approach this from a couple perspectives:
+        * finding similar/different type of music (genre)
+        * finding similar/different topics and content (what the song is about)
+    * The focus here is on the listener's (enduser's) **discoverability and consumption** 
+        * Can we find music that is of similar style/genre _that the listener may not have heard?_
+        * Can we position playlists or track sets _that journey through the listener's current selection?_
+        
+The focus is just on outputs (tracks or list of tracks)
+
+## Million Songs Recommendation System - Data
+
+Data tidying and preparation is a task that would be it's own facet within the workflow:
+
+- Transformation of the tables into consumable inputs to the recommendation model
+- Generation of relevant dataset from raw
+    * some analysis and modelling would need to be done on the lyrics data to formulate the concepts of similarity/differences
+        * text analsyis, topic modelling (basic model perhaps from word frequencies) 
+        
+Production considerations involve efficiencies to the code by compartmentalizing tasks into a service-style: each component focuses on a single task and outputs to the next.  Further, most if not all of the input data transformations and tidying can be done offline
+
+
+## Million Songs Recommendation System - Testing
+
+Common metrics used for these types of content-based recommendation systems are:
+
+- RMSE (Root Mean Squared Error)
+- MAE (Mean Absolute Error)
+
+Specifics would be determined from the exploratory analysis and preferences on whether we want to penalize really bad estimates
+
+If possible, a training set may be used to determine whether the genre/topic of the next track is correctly predicted (accuracy, confusion matrix)
+
+
+## Million Songs Recommendation System - Limitations & Evolution
+
+The key limitation of this approach is that it ignores the behaviours and nuances of the listener
+
+By focusing just on the music we may be missing some important considerations such as the ways in which people listen to music, such as younger listeners versus older listeners
+
+This limitation may be crucial since the approach and design may be radically different, or it may be an evolutionary component that will serve to better filter the set of recommendations
+
+
+## Million Songs Recommendation System - Production Implementation 
+
+Productionalization of such a model by a company like Spotify would involve engineering considerations to ensure that the prototype model is tested and appropriate for the needs at scale
+
+There would also be considerations for the implementation of the system to the application (specific UI/UX): the model's creation is focused solely on generating recommendations, but productionalizing needs to consider the whole spectrum of the listener as it pertains to the application
+
+- How will the recommendations be presented?
+    * consider the UI around the concepts of the model, can we surface the recommendations in a way that empowers the user to choose their journey
+        * _"Take a deep dive into 1980s Pop"_ .. _"Explore other songs about that first love"_
+        * Utilizing the similarity measure as differences: _"Transition from work to after work drinks with these songs"_
+        
+
+## Thank You
+
+Thoughts, feedback, questions
