@@ -1,0 +1,228 @@
+---
+title: "Data Science @ McDonald's"
+subtitle: "Exercise 02 - Ultimate Big Mac Analysis"
+author: "Khalil H Najafi"
+date: "December 2019"
+output: 
+        ioslides_presentation:
+                logo: mcd.png 
+                widescreen: true
+                smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(data.table)
+library(reshape2)
+library(plotly)
+
+###### +--> Datasets ######
+
+# Dataset containing forecasted units sold for selected items, weekly
+# NB: for non ultimate Big Mac, forecast is based on non-promotional presence
+dat_raw_forecast <- fread("./Data/data-forecast_units_sold_weekly.csv")
+
+# Dataset containing actual units sold for selected items, weekly
+dat_raw_actual <- fread("./Data/data-actual_units_sold_weekly.csv")
+
+## Tidying
+dat_forecast <- as_tibble(dat_raw_forecast) %>%
+        melt(id.vars = "item") %>%
+        rename(t = variable, units = value) %>%
+        as_tibble()
+
+dat_actual <- dat_raw_actual %>%
+        melt(id.vars = "item") %>%
+        rename(t = variable, units = value) %>%
+        as_tibble()
+
+# # # #
+
+###### +--> Data Tables ######
+
+## Non UBM Weekly Forecast Totals (non_ubm_wft) ; (f)
+f <- dat_forecast %>%
+        filter(item != "Ultimate Big Mac Limited Time Offer") %>%
+        group_by(t) %>%
+        summarise(total_units_fc = sum(units))
+
+## Non UBM Weekly Actual Totals (non_ubm_wat) ; (g)
+g <- dat_actual %>%
+        filter(item != "Ultimate Big Mac Limited Time Offer") %>%
+        group_by(t) %>%
+        summarise(total_units_act = sum(units))
+
+## Difference of Non UBM Weekly Actual to Forecast ; (δ)
+d <- g %>%
+        left_join(f) %>%
+        mutate(d = total_units_act - total_units_fc) %>%
+        select(t, d)
+
+## Proportion of (absolute) difference to UBM actual ; (p)
+p <- dat_actual %>%
+        filter(item == "Ultimate Big Mac Limited Time Offer") %>%
+        left_join(d) %>%
+        mutate(p = abs(d)/units,
+               p_inv = 1 - p) %>%
+        select(t, p, p_inv)
+
+## p and p_inv determine the success of the promotion based on a priori expectations/objectives
+mean(p$p)
+mean(p$p_inv)
+
+## Comparing UBM actual v UBM forecast (dat_ubm)
+
+#UBM forecasted
+UBM_f <- dat_forecast %>%
+        filter(item == "Ultimate Big Mac Limited Time Offer") %>%
+        rename(units_f = units)
+
+#UBM actual v UBM forecasted, by units and percentage
+dat_UBM <- dat_actual %>%
+        filter(item == "Ultimate Big Mac Limited Time Offer") %>%
+        left_join(UBM_f) %>%
+        mutate(delta = units - units_f,
+               delta_perc = delta/units_f * 100)
+
+#Average difference (percentage)
+mean(dat_UBM$delta_perc)
+```
+
+## Context
+
+This was a sample business case analysis featuring a limited time item, **The Ultimate Big Mac**
+
+The purpose was to determine if the promotion was a (business) success
+
+The datasets used are weekly sales data (in units) of the promotional item and a subset of other items, as well as forecasts of both the promotional item and notably the other items _in the absence of any promotion_; there are four weeks of data $(n = 4)$
+
+A specific business objective was 35% of Ultimate Big Mac (UBM) units sold to be new/incremental, and what follows is the summary and break down of my analysis
+
+## The Datasets
+
+A brief review of the datasets: (1) actual units sold weekly; (2) forecasted units weekly 
+
+```{r datasets, echo=F}
+dat_raw_forecast
+
+dat_raw_actual
+```
+
+
+
+## 1 - Did the UBM Meet the Business Objective?
+
+In summary: yes, for the 4-week window the objective was exceeded
+
+- The average proportion of UBM units attributable to new business $(p)$: **`r round(mean(p$p_inv)*100, 1)`%**
+- The promotion exceeded the objective for each of the four weeks
+    * Max was week 2 $(p^{max})$: **`r round(max(p$p_inv)*100, 1)`%**
+    * Lowest was week 4 $(p^{min})$: **`r round(min(p$p_inv)*100, 1)`%**
+    
+## 1 - Meet Business Objective (cont) - Analysis Approach
+
+To arrive at this, the process I followed was:
+
+- Weekly actual without UBM and weekly forecast without UBM
+    * $(weekly^{actual}_i - weeklyUBM^{actual}_i) = f_i$
+    * $(weekly^{forecast}_i - weeklyUBM^{forecast}_i = g_i)$
+- Take the difference of these to get the delta    
+    * $f_i - g_i = \delta_i \longrightarrow \delta \epsilon (-\infty, +\infty)$
+    * If delta is negative, then there is some loss/cannibalization from UBM, if delta is positive then UBM has improved general sales (multiplier .. though more likely forecasts have low confidence)
+- Determine the proportion of delta to actual UBM units, and ensure it is less than 0.65
+    * $\frac{|\delta_i|}{weeklyUBM^{actual}_i} = p_i \longrightarrow p_i \leq 0.65$
+- Equivalently, check that one minus this proportion is greater than 0.35
+    * $\therefore 1-p_i \geq 0.35$
+    
+## 1 - Meet Business Objective (cont) - Visualizations
+
+Let's look at the weekly breakdown of proportion of UBM sales attributable to new business:
+
+```{r Vis Weekly Prop, echo=F}
+#mean p_inv
+p_inv_bar <- mean(p$p_inv)
+ggplotly(ggplot(p, aes(t, p_inv)) +
+        geom_bar(stat = "identity",
+                 fill = "#27251F") +
+        geom_hline(yintercept = 0.35, linetype = "dashed", colour = "#DA291C") +
+        annotate("text", x = 4.1, y = 0.37, label = "35% objective",
+                 colour = "#DA291C", size = 3) +
+        geom_hline(yintercept = p_inv_bar, colour = "#FFC72C") +
+        annotate("text", x = 4.1, y = p_inv_bar+0.014, label = "Mean 51.2%",
+                 colour = "#FFC72C", size = 3) +
+        scale_y_continuous(labels = scales::percent) +
+        labs(x = "",
+             y = "1-p"))
+```
+
+
+## 1 - Meet Business Objective (cont) - Visualizations
+
+Average proportion **~1.5X greater** than target: large variance in forecasted units to actual units for UBM
+
+```{r Vis UBM Actual v Forecast, echo=F}
+ggplotly(ggplot(dat_UBM, aes(t, units, group = item)) +
+        geom_point(colour = "#DA291C") +
+        geom_line(colour = "#DA291C") +
+        geom_point(aes(t, units_f),
+                   colour = "#FFC72C",
+                   pch = 1) +
+        geom_line(aes(t, units_f),
+                  colour = "#FFC72C",
+                  linetype = "dashed") +
+        labs(x = "",
+             y = "Units"))
+```
+
+
+## 2 - What Other Data Would Be Useful?
+
+I would look at the following additions to the dataset initially:
+
+- Full item units sold/forecasted
+- Adding or identifying meals versus item-only purchases
+- Date and location data (seasonality and local effects)
+- Increased window $[n>4]$ (context and further seasonality/effects)
+- Revenue data (ROI analysis)
+    * this is useful as an input for partnering teams (Marketing, Research, etc) though should not fully dictate direction
+    
+The approach for the above would be to locate and aggregate the data into the datasets; expanding existing and/or additional tables
+
+
+## 3 - Recommendations?
+
+Business objective setting is no easy task, and fully considered takes more than revenue to inform, consider other dimensions:
+
+- Experience
+- Brand
+- Competitive landscape (competitors offering certain combinations, "2 for $5")
+- Food and eating trends (rise of breakfast items)
+
+There may be generalizations from such promotions that are useful to abstract: a promotional sandwich, modification of a core/best selling item; this can be a useful input in designing campaigns or food ideas
+
+
+## 4 - Expanding the Analysis
+
+Aside from the additional variables mentioned previously, I was mostly curious about two somewhat related things:
+
+- Comparing apples to apples (or Big Macs to Big Macs)
+    * a more comparative basis is in the performance of the Ultimate Big Mac to other sandwich items such as the Big Mac, Quarter Pounder, McChicken, etc
+    * if we cluster the menu list would there be categories that highlight more comparable items? How would these metrics change our conclusion? How would the objectives themselves change? (35% of new units may become 60% of average units within cluster)
+- Exploring 'cannibalization': Are there relationships between items (positive/negative)?
+    * it may be true that for some items, there are correlations with other items: are there more coffees added to McMuffin purchases? Are there no yogurts with Big Mac purchases? 
+    * in determining this relationship, would there be a different result, for example, the availability of the UBM cannibalizes from McMuffin _and coffee_
+    
+## Thank You
+
+Thoughts, feedback, questions .. did I take a completely wrong approach? :)
+
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+
+
