@@ -18,7 +18,9 @@
 
 ###### FUNCTIONS & WORKSPACE ######
 # REQUIRED LIBRARIES
-libraries <- c("data.table", "tidyverse", "lubridate", "shiny", "miniUI")
+libraries <- c("data.table", "tidyverse", "lubridate",
+               "shiny", "miniUI", "reshape2",
+               "plotly")
 lapply(libraries, require, character.only = T)
 rm(libraries)
 
@@ -27,7 +29,7 @@ rm(libraries)
 
 ###### DATASET ######
 
-###### >>> Dataset Creation ######
+###### +--> Dataset Creation ######
 
 ## Raw Datasets
 
@@ -57,11 +59,13 @@ dat_actual <- dat_raw_actual %>%
 
 
 
-#### 1 - PERFORMANCE ANALYSIS ####
+#### PERFORMANCE ANALYSIS (1) ####
 # To assess whether the objective was met, the analysis can be defined by:
 #       prop of difference of weekly actual total (f) to
 #       weekly forecast total (g) over UBM total is <= 0.65 (δ)
 # f - g = δ ; |δ|/UBM <= 0.65 (p) ; p_mean <= 0.65
+
+###### +--> Data Tables ######
 
 ## Non UBM Weekly Forecast Totals (non_ubm_wft) ; (f)
 f <- dat_forecast %>%
@@ -90,7 +94,8 @@ p <- dat_actual %>%
         select(t, p, p_inv)
 
 ## p and p_inv determine the success of the promotion based on a priori expectations/objectives
-
+mean(p$p)
+mean(p$p_inv)
 
 ## Comparing UBM actual v UBM forecast (dat_ubm)
 
@@ -108,5 +113,42 @@ dat_UBM <- dat_actual %>%
 
 #Average difference (percentage)
 mean(dat_UBM$delta_perc)
+
+
+
+###### +--> Visualizations ######
+
+###### +-----> UBM Objective Weekly ######
+
+#mean p_inv
+p_inv_bar <- mean(p$p_inv)
+ggplot(p, aes(t, p_inv)) +
+        geom_bar(stat = "identity",
+                 fill = "#27251F") +
+        geom_hline(yintercept = 0.35, linetype = "dashed", colour = "#DA291C") +
+        annotate("text", x = 4.1, y = 0.37, label = "35% objective",
+                 colour = "#DA291C", size = 3) +
+        geom_hline(yintercept = p_inv_bar, colour = "#FFC72C") +
+        annotate("text", x = 4.1, y = p_inv_bar+0.014, label = "Mean 51.2%",
+                 colour = "#FFC72C", size = 3) +
+        scale_y_continuous(labels = scales::percent) +
+        labs(x = "",
+             y = "p inverse")
+
+
+
+
+###### +-----> UBM Weekly (Actual, Forecasted) ######
+ggplot(dat_UBM, aes(t, units, group = item)) +
+        geom_point(colour = "#DA291C") +
+        geom_line(colour = "#DA291C") +
+        geom_point(aes(t, units_f),
+                   colour = "#FFC72C",
+                   pch = 1) +
+        geom_line(aes(t, units_f),
+                  colour = "#FFC72C",
+                  linetype = "dashed") +
+        labs(x = "",
+             y = "Units")
 
 
