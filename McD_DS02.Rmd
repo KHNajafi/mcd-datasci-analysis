@@ -218,11 +218,4 @@ Aside from the additional variables mentioned previously, I was mostly curious a
 Thoughts, feedback, questions .. did I take a completely wrong approach? :)
 
 
-## Slide with Bullets
-
-- Bullet 1
-- Bullet 2
-- Bullet 3
-
-
 
